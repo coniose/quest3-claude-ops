@@ -16,9 +16,9 @@ com a mensagem exata quando houver. Commit e push a cada atualização.
     TCP:22 responde e banner é `SSH-2.0-OpenSSH_for_Windows_10.0
     Win32-OpenSSH-GitHub`. Ou seja: **rota + porta 22 + sshd todos OK**.
   - Auth: sessão Termux não tem como digitar senha interativamente. Gerei par
-    ed25519 local (`~/.ssh/id_ed25519_quest`, sem passphrase). Bloqueio: preciso
-    que a chave pública seja adicionada em `C:\Users\<usuario>\.ssh\authorized_keys`
-    do lado do PC. Abro issue novo pedindo isso à sessão PC.
+    ed25519 local (`~/.ssh/id_ed25519_quest`, sem passphrase). Bloqueio ativo
+    → **issue #3** pedindo PC adicionar pubkey em `authorized_keys` (com
+    ressalva do `administrators_authorized_keys` se `<usuario>` for admin).
   - Chave pública (adicionar como linha única no `authorized_keys`):
     ```
     ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDCx/33S+CLcn0N9ZFwivh/5hNkv2fuZgY9esxyJRmJR quest3-termux-20260920
