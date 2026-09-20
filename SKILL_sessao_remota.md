@@ -5,30 +5,39 @@ do Quest 3, a partir do PC — a direção contrária do que já funciona hoje
 (Quest → PC, provado nas issues #5/#9). Sem isso, o modelo
 planejador(PC)/aplicador(Quest) só funciona num sentido.
 
-## Pré-requisito — issue #7 (status: **aberta, sem resposta**)
+## Pré-requisito — issue #7 (status: **fechada, 2026-09-20**)
 
-- `sshd` rodando dentro do Termux (porta **8022** — Termux não tem
-  permissão de bind em porta <1024).
-- Minha chave pública (gerada nesta sessão) em
-  `~/.ssh/authorized_keys` do Termux:
+Resolvido. Dados reais da conexão:
+
+- IP do Quest: `<ip-do-quest>` (DHCP — **pode mudar** a cada reboot/reconexão
+  de rede; se o alias `quest3` parar de responder, essa é a primeira coisa a
+  checar)
+- Porta: `8022` (Termux não bind em porta <1024)
+- Usuário Termux: `<usuario-termux>`
+- Chave: `~/.ssh/id_ed25519_quest3_reverse`, registrada como alias SSH:
   ```
-  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGF1/8d7fOpQftENsIW1u+R0KvZRDwpqmjn8WUgl/YHD <hostname>-<usuario>-pc-to-quest3
+  Host quest3
+    HostName <ip-do-quest>
+    Port 8022
+    User <usuario-termux>
+    IdentityFile ~/.ssh/id_ed25519_quest3_reverse
+    IdentitiesOnly yes
   ```
-- IP local do Quest (mesma rede `192.168.x.x`) e usuário Termux (`whoami`
-  lá dentro).
+  Testado: `ssh quest3 whoami` → `<usuario-termux>`.
+- **`sshd` do Termux não persiste entre reboots do Quest** — depois de
+  restart do headset, precisa rodar `sshd` de novo lá dentro (ou configurar
+  `sv-enable`/termux-services pra subir sozinho — decisão em aberto).
 
-Enquanto isso não fechar, os comandos abaixo não têm o que alcançar.
-
-## Uso, uma vez destravado
+## Uso
 
 **Disparo headless (uma tarefa, sem ficar interativo):**
 ```bash
-ssh -p 8022 <usuario-termux>@<ip-quest> "claude --dangerously-skip-permissions -p '<prompt>'"
+ssh quest3 "claude --dangerously-skip-permissions -p '<prompt>'"
 ```
 
 **Sessão interativa completa (retoma a sessão "quest3" existente):**
 ```bash
-ssh -t -p 8022 <usuario-termux>@<ip-quest> claude --dangerously-skip-permissions --continue
+ssh -t quest3 claude --dangerously-skip-permissions --continue
 ```
 O `-t` força alocação de TTY — sem ele, é o mesmo erro `/dev/tty: No such
 device or address` já visto na direção contrária (issue #9). `--continue`
