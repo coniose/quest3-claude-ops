@@ -17,8 +17,12 @@ com a mensagem exata quando houver. Commit e push a cada atualização.
     Win32-OpenSSH-GitHub`. Ou seja: **rota + porta 22 + sshd todos OK**.
   - Auth: sessão Termux não tem como digitar senha interativamente. Gerei par
     ed25519 local (`~/.ssh/id_ed25519_quest`, sem passphrase). Bloqueio ativo
-    → **issue #3** pedindo PC adicionar pubkey em `authorized_keys` (com
-    ressalva do `administrators_authorized_keys` se `<usuario>` for admin).
+    → **issue #3**: PC não conseguiu escrever em
+    `C:\ProgramData\ssh\administrators_authorized_keys` (shell dele sem admin);
+    pediu ao Julio rodar o bloco PowerShell **em janela elevada**. Testado
+    daqui: `ssh -i ... -o PasswordAuthentication=no <usuario>@<ip-do-pc>` retorna
+    `Permission denied (publickey,password,keyboard-interactive)` — auth ainda
+    falha, ou seja pubkey não está no arquivo (ou está com ACL errada).
   - Chave pública (adicionar como linha única no `authorized_keys`):
     ```
     ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDCx/33S+CLcn0N9ZFwivh/5hNkv2fuZgY9esxyJRmJR quest3-termux-20260920
