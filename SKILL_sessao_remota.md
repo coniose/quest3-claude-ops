@@ -28,12 +28,31 @@ Resolvido. Dados reais da conexão:
   restart do headset, precisa rodar `sshd` de novo lá dentro (ou configurar
   `sv-enable`/termux-services pra subir sozinho — decisão em aberto).
 
+## Armadilha real já pega uma vez: versão global instável
+
+O pacote global `@anthropic-ai/claude-code` no Termux **já voltou sozinho pra
+2.1.278** (que exige binário nativo, inexistente pra Android/Bionic) depois
+de ter sido fixado em `2.1.112` (JS puro, funciona). Sintoma: `claude
+--version` responde `Error: claude native binary not installed`. Antes de
+qualquer disparo remoto, se der esse erro, rodar de novo via SSH:
+```bash
+ssh quest3 "npm install -g @anthropic-ai/claude-code@2.1.112 --ignore-scripts --force"
+```
+Confirmado 2026-09-20: `claude --version` volta a responder `2.1.112 (Claude
+Code)` normalmente, sem precisar de caminho completo nem alias — já resolve
+em PATH puro numa sessão SSH não-interativa.
+
 ## Uso
 
-**Disparo headless (uma tarefa, sem ficar interativo):**
+**Disparo headless (uma tarefa, sem ficar interativo) — testado e confirmado 2026-09-20:**
 ```bash
 ssh quest3 "claude --dangerously-skip-permissions -p '<prompt>'"
 ```
+Teste real: prompt "reply with exactly: pong from quest via pc-initiated
+ssh" devolveu exatamente isso. Independente de qualquer sessão interativa
+(tipo a antiga "Opus 4.7") estar aberta ou não no Termux — isso dispara um
+processo novo, executa e termina, é o padrão certo pra "manda instrução,
+executa script, não fica esperando".
 
 **Sessão interativa completa (retoma a sessão "quest3" existente):**
 ```bash
