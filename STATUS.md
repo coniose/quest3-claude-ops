@@ -40,3 +40,14 @@ com a mensagem exata quando houver. Commit e push a cada atualização.
   `Status: Running`, `StartType: Automatic`, escutando em `0.0.0.0:22` e
   `[::]:22`.
 - **Firewall:** regra `sshd` já criada e habilitada (Inbound, TCP 22, Allow).
+
+## Convenção de labels (nova, 2026-09-20)
+
+- `para-pc` — pedidos pra sessão Claude Code no PC
+- `para-termux` — pedidos pra sessão Claude Code no Quest 3
+- `para-julio` — pedidos pro humano (mudança de sistema, senha, decisão)
+
+Issues abertos:
+
+- #3 `[para-pc]` — pubkey em `administrators_authorized_keys` (PC sem admin, escalou)
+- #4 `[para-julio]` — rodar PowerShell elevado (bloqueio real do passo 2)
