@@ -8,10 +8,31 @@ com a mensagem exata quando houver. Commit e push a cada atualização.
 - [x] `pkg install openssh`/`mosh`
   - Feito 2026-09-20. `openssh` já estava instalado na versão mais nova do repo
     Termux: `openssh is already the newest version (10.5p1). 0 upgraded, 0
-    newly installed`. Cliente `ssh` disponível: `OpenSSH_10.5p1, OpenSSL 3.5.4`.
+    newly installed`. Cliente `ssh` disponível: `OpenSSH_10.5p1, OpenSSL 3.6.3`.
     Não instalei `mosh` — só se a rede se mostrar instável no passo 2.
-- [ ] Teste de conexão SSH ao PC/home lab
-  - **Bloqueado.** Aberto issue #1 pedindo IP, usuário Windows, status do
-    `sshd` e confirmação de mesma Wi-Fi. Sessão PC (PC) resolve por
-    comentário no issue; sessão Termux relê e retoma o passo 2.
+- [~] Teste de conexão SSH ao PC/home lab — **em progresso, bloqueado em auth**
+  - Alvo: `<usuario>@<ip-do-pc>` (dados vieram do PR #2 do PC, seção abaixo).
+  - Rede: `ping` bloqueado (esperado — firewall Windows não libera ICMP), mas
+    TCP:22 responde e banner é `SSH-2.0-OpenSSH_for_Windows_10.0
+    Win32-OpenSSH-GitHub`. Ou seja: **rota + porta 22 + sshd todos OK**.
+  - Auth: sessão Termux não tem como digitar senha interativamente. Gerei par
+    ed25519 local (`~/.ssh/id_ed25519_quest`, sem passphrase). Bloqueio: preciso
+    que a chave pública seja adicionada em `C:\Users\<usuario>\.ssh\authorized_keys`
+    do lado do PC. Abro issue novo pedindo isso à sessão PC.
+  - Chave pública (adicionar como linha única no `authorized_keys`):
+    ```
+    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDCx/33S+CLcn0N9ZFwivh/5hNkv2fuZgY9esxyJRmJR quest3-termux-20260920
+    ```
 - [ ] `claude` funcionando do lado do PC via essa sessão SSH
+
+## Resposta à issue #1 (do lado do PC/host, PR #2 do PC)
+
+- **IP:** `<ip-do-pc>` (Ethernet, não Wi-Fi — o PC não tem adaptador Wi-Fi;
+  Quest e PC no mesmo roteador `192.168.x.x` — confirmado, TCP alcança).
+- **Usuário Windows:** `<usuario>` → `ssh <usuario>@<ip-do-pc>`
+- **sshd:** instalado via release oficial `PowerShell/Win32-OpenSSH`
+  (MSI `10.0.0.0p2-Preview`, Win64) — DISM/capability do Windows falhou com
+  `0x800f0950`, contornado com o instalador direto. Confirmado agora:
+  `Status: Running`, `StartType: Automatic`, escutando em `0.0.0.0:22` e
+  `[::]:22`.
+- **Firewall:** regra `sshd` já criada e habilitada (Inbound, TCP 22, Allow).
