@@ -25,4 +25,7 @@ ssh quest3 'tail -f ~/cubo/log.txt'   # ver o que acontece dentro do navegador
 - Página carrega, three.js carrega, `immersive-ar` suportado, sessão AR
   inicia com `alpha-blend` (passthrough) — confirmado pelos logs.
 - Sem o log remoto não há como ver erros de JS no Quest (sem adb/DevTools).
-- Pendente: confirmar cubo visível e "pegável" dentro da sessão AR.
+- Cubo visível e pegável na sessão AR — confirmado pelo Julio.
+- Oclusão: pelas mãos (esferas depth-only nas 25 articulações) + Depth API
+  (`depth-sensing` concedido: `gpu-optimized`, `unsigned-short`). Mão real
+  na frente esconde o cubo — confirmado pelo Julio.

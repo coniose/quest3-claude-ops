@@ -43,7 +43,10 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(innerWidth, innerHeight);
 renderer.xr.enabled = true;
 document.body.appendChild(renderer.domElement);
-document.body.appendChild(ARButton.createButton(renderer, { optionalFeatures: ['hand-tracking', 'local-floor'] }));
+document.body.appendChild(ARButton.createButton(renderer, {
+  optionalFeatures: ['hand-tracking', 'local-floor', 'depth-sensing'],
+  depthSensing: { usagePreference: ['gpu-optimized'], dataFormatPreference: ['luminance-alpha'] }
+}));
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 20);
@@ -98,6 +101,29 @@ for (let i = 0; i < 2; i++) {
   scene.add(ctrl);
 }
 
+// Oclusao pelas maos: esferas nas articulacoes que nao pintam cor, so
+// profundidade. Onde a mao real esta na frente, o cubo some e aparece o passthrough.
+const oclusor = new THREE.MeshBasicMaterial({ colorWrite: false });
+const esfera = new THREE.SphereGeometry(1, 12, 8);
+const maos = [renderer.xr.getHand(0), renderer.xr.getHand(1)];
+maos.forEach(m => scene.add(m));
+let maosLogadas = false;
+function atualizaOclusaoMaos() {
+  for (const mao of maos) {
+    for (const nome in mao.joints) {
+      const j = mao.joints[nome];
+      if (!j.userData.oclusor && j.jointRadius) {
+        const e = new THREE.Mesh(esfera, oclusor);
+        e.scale.setScalar(j.jointRadius * 1.6);
+        e.renderOrder = -1;
+        j.add(e);
+        j.userData.oclusor = e;
+        if (!maosLogadas) { maosLogadas = true; log('maos detectadas: oclusao pelas maos ativa'); }
+      }
+    }
+  }
+}
+
 function mira(ctrl) {
   matriz.identity().extractRotation(ctrl.matrixWorld);
   raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
@@ -108,6 +134,7 @@ function mira(ctrl) {
 let precisaPosicionar = false;
 renderer.xr.addEventListener('sessionstart', () => {
   const sess = renderer.xr.getSession();
+  log('recursos concedidos:', [...(sess.enabledFeatures || [])].join(','), 'depth:', sess.depthUsage || '-', sess.depthDataFormat || '-');
   log('sessao XR iniciou', sess.environmentBlendMode, 'refspace:', renderer.xr.getReferenceSpace() ? 'ok' : 'nulo');
   precisaPosicionar = true;
 });
@@ -129,6 +156,7 @@ renderer.setAnimationLoop(() => {
       precisaPosicionar = false;
     }
   }
+  atualizaOclusaoMaos();
   anel.position.copy(cubo.getWorldPosition(_p));
   if (renderer.xr.isPresenting && performance.now() - ultimoLog > 2000) {
     ultimoLog = performance.now();

@@ -57,3 +57,18 @@ agendada com privilégio elevado), documentar aqui a decisão e o motivo.
   precisa agir.
 - Trabalho feito: commit + push direto, sem PR se for so documentacao de
   estado (STATUS.md, este arquivo).
+
+## Ver o que o Julio vê no headset (captura de tela)
+
+**Sempre perguntar antes** ("posso ver sua tela?") — só capturar/ler com
+permissão explícita a cada vez. O PC não consegue disparar a captura sozinho
+(Termux não tem `screencap`; sem adb). Fluxo:
+
+1. Julio tira o print nativo do Quest (inclui passthrough + conteúdo virtual).
+2. PC baixa o mais recente:
+   ```bash
+   scp "quest3:$(ssh quest3 'ls -t /sdcard/Oculus/Screenshots/* | head -1')" <scratchpad>/captura.jpg
+   ```
+   (Termux consegue ler `/sdcard/Oculus/Screenshots/` — testado 2026-09-25.)
+3. Conferir a data no nome do arquivo antes de abrir — só abrir a captura
+   recém-tirada, nunca prints antigos.
