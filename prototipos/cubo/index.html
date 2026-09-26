@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cubo interativo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #eee; font-family: system-ui, sans-serif; overflow: hidden; }
+  #info { position: absolute; top: 16px; left: 16px; right: 16px; font-size: 18px; line-height: 1.4; }
+</style>
+<script>
+  window.log = (...a) => {
+    const msg = a.map(x => typeof x === 'string' ? x : JSON.stringify(x)).join(' ');
+    try { navigator.sendBeacon('/log', msg); } catch (e) {}
+    const el = document.getElementById('status'); if (el) el.textContent += msg + String.fromCharCode(10);
+  };
+  addEventListener('error', e => log('ERRO', e.message, (e.filename||'') + ':' + (e.lineno||'')));
+  addEventListener('unhandledrejection', e => log('ERRO promise', String(e.reason)));
+  log('pagina carregou', navigator.userAgent);
+</script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="info">Toque em <b>START AR</b> embaixo. O cubo aparece na sua frente.<br>
+Aponte o controle (ou a mão) e aperte o gatilho / faça pinça pra pegar, mover e girar.</div>
+<pre id="status" style="position:absolute;bottom:80px;left:16px;right:16px;font-size:14px;color:#9f9;white-space:pre-wrap"></pre>
+<script type="module">
+import * as THREE from 'three';
+import { ARButton } from 'three/addons/webxr/ARButton.js';
+log('three carregou', THREE.REVISION);
+if (navigator.xr) {
+  navigator.xr.isSessionSupported('immersive-ar').then(ok => log('immersive-ar suportado:', ok));
+  navigator.xr.isSessionSupported('immersive-vr').then(ok => log('immersive-vr suportado:', ok));
+} else log('SEM navigator.xr');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(innerWidth, innerHeight);
+renderer.xr.enabled = true;
+document.body.appendChild(renderer.domElement);
+document.body.appendChild(ARButton.createButton(renderer, { optionalFeatures: ['hand-tracking', 'local-floor'] }));
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 20);
+camera.position.set(0, 1.4, 0.3);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+const sol = new THREE.DirectionalLight(0xffffff, 2);
+sol.position.set(1, 3, 2);
+scene.add(sol);
+
+// Cubo de 20cm, ~60cm à frente, na altura dos olhos de alguém sentado/em pé
+const COR_NORMAL = 0x3b82f6, COR_MIRA = 0xf59e0b, COR_SEGURANDO = 0x22c55e;
+const cubo = new THREE.Mesh(
+  new THREE.BoxGeometry(0.2, 0.2, 0.2),
+  new THREE.MeshStandardMaterial({ color: COR_NORMAL, roughness: 0.4, metalness: 0.1 })
+);
+cubo.position.set(0, 1.3, -0.6);
+scene.add(cubo);
+// anel grande em volta do cubo, so pra achar ele no espaco
+const anel = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.01, 8, 64), new THREE.MeshBasicMaterial({ color: 0xff00ff }));
+scene.add(anel);
+
+// Controles/mãos: raio + pegar com select (gatilho ou pinça)
+const raycaster = new THREE.Raycaster();
+const matriz = new THREE.Matrix4();
+let segurando = null;
+
+for (let i = 0; i < 2; i++) {
+  const ctrl = renderer.xr.getController(i);
+  const raio = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]),
+    new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })
+  );
+  raio.scale.z = 2;
+  ctrl.add(raio);
+
+  ctrl.addEventListener('selectstart', () => {
+    if (mira(ctrl)) {
+      log('pegou o cubo');
+      ctrl.attach(cubo);
+      segurando = ctrl;
+      cubo.material.color.setHex(COR_SEGURANDO);
+    }
+  });
+  ctrl.addEventListener('selectend', () => {
+    if (segurando === ctrl) {
+      scene.attach(cubo);
+      segurando = null;
+      cubo.material.color.setHex(COR_NORMAL);
+    }
+  });
+  scene.add(ctrl);
+}
+
+function mira(ctrl) {
+  matriz.identity().extractRotation(ctrl.matrixWorld);
+  raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
+  raycaster.ray.direction.set(0, 0, -1).applyMatrix4(matriz);
+  return raycaster.intersectObject(cubo, false).length > 0;
+}
+
+let precisaPosicionar = false;
+renderer.xr.addEventListener('sessionstart', () => {
+  const sess = renderer.xr.getSession();
+  log('sessao XR iniciou', sess.environmentBlendMode, 'refspace:', renderer.xr.getReferenceSpace() ? 'ok' : 'nulo');
+  precisaPosicionar = true;
+});
+renderer.xr.addEventListener('sessionend', () => log('sessao XR terminou'));
+const _v = new THREE.Vector3(), _q = new THREE.Quaternion();
+let frames = 0, ultimoLog = 0;
+const _p = new THREE.Vector3();
+
+renderer.setAnimationLoop(() => {
+  if (precisaPosicionar && renderer.xr.isPresenting) {
+    const cam = renderer.xr.getCamera();
+    cam.getWorldPosition(_v); cam.getWorldQuaternion(_q);
+    if (++frames > 20) {
+      const frente = new THREE.Vector3(0, 0, -0.6).applyQuaternion(_q);
+      frente.y = 0;
+      cubo.position.copy(_v).add(frente.setLength(0.6));
+      cubo.position.y = _v.y - 0.1;
+      log('cabeca em', _v.toArray().map(n => +n.toFixed(2)), 'cubo em', cubo.position.toArray().map(n => +n.toFixed(2)));
+      precisaPosicionar = false;
+    }
+  }
+  anel.position.copy(cubo.getWorldPosition(_p));
+  if (renderer.xr.isPresenting && performance.now() - ultimoLog > 2000) {
+    ultimoLog = performance.now();
+    const cam = renderer.xr.getCamera(); cam.getWorldPosition(_v);
+    log('batida: cabeca', _v.toArray().map(n => +n.toFixed(2)), 'cubo', _p.toArray().map(n => +n.toFixed(2)), 'dist', +_v.distanceTo(_p).toFixed(2));
+  }
+  if (!segurando) {
+    cubo.rotation.y += 0.005;
+    const mirando = renderer.xr.isPresenting && [0, 1].some(i => mira(renderer.xr.getController(i)));
+    cubo.material.color.setHex(mirando ? COR_MIRA : COR_NORMAL);
+  }
+  renderer.render(scene, camera);
+});
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
