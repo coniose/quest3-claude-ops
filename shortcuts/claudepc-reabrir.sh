@@ -16,6 +16,6 @@ pkill -f "^ssh -t pc " && sleep 1
 am startservice --user 0 \
   -n com.termux/com.termux.app.RunCommandService \
   -a com.termux.RUN_COMMAND \
-  --es com.termux.RUN_COMMAND_PATH "$PREFIX/bin/tmux"   --esa com.termux.RUN_COMMAND_ARGUMENTS "new-session,-s,claude,$PREFIX/bin/claudepc" \
+  --es com.termux.RUN_COMMAND_PATH "$PREFIX/bin/tmux" \n  --esa com.termux.RUN_COMMAND_ARGUMENTS "new-session,-s,claude,$PREFIX/bin/claudepc" \
   --ez com.termux.RUN_COMMAND_BACKGROUND false \
   --es com.termux.RUN_COMMAND_SESSION_ACTION 0 >/dev/null

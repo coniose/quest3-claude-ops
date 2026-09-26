@@ -11,7 +11,8 @@
 #     IdentitiesOnly yes
 #
 # Uso:
-#   claudepc                 -> sessao interativa, retoma a ultima (--continue)
+#   claudepc                 -> sessao interativa NOVA (sem --continue: nao
+#                               herda a conversa do PC — ver SKILL_sessao_remota.md)
 #   (sempre com --dangerously-skip-permissions — decisao do Julio 2026-09-25,
 #   ver SKILL_sessao_remota.md)
 #   claudepc -p "prompt"     -> repassa os argumentos pro claude (headless)
@@ -24,7 +25,7 @@ PC_HOST="${CLAUDEPC_HOST:-pc}"
 PC_DIR="${CLAUDEPC_DIR:-C:\\quest3-claude-ops}"
 
 if [ $# -eq 0 ]; then
-  exec ssh -t "$PC_HOST" "cd /d $PC_DIR && claude --dangerously-skip-permissions --continue"
+  exec ssh -t "$PC_HOST" "cd /d $PC_DIR && claude --dangerously-skip-permissions"
 fi
 
 args=""

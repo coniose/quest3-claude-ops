@@ -97,3 +97,17 @@ apps do Quest — sandbox do Android):
   teclas em TTY de outra sessão. Por isso "sair" é matar o processo, não
   mandar `/exit`. Se precisar disso, rodar sessões dentro de `tmux` e usar
   `tmux send-keys` (ainda não configurado).
+
+## Lição: `--continue` criou um "gêmeo" da sessão do PC (2026-09-25)
+
+`claudepc` usava `claude --continue` em `C:\quest3-claude-ops` — a mesma
+pasta da sessão principal do PC. Resultado: a sessão aberta na tela do
+Quest retomou **a conversa da sessão do PC** (mesmo histórico, mesmo
+bypass de permissões), recebeu o Hello World de teste e saiu executando
+trabalho sozinha (commit + push `b7308f3`) em paralelo com a original.
+
+Decisão do Julio: a sessão do Quest só precisa conhecer **o plano**, não a
+conversa do PC. `claudepc` agora abre sessão nova (sem `--continue`). A
+comunicação entre as sessões é por **PR** (PC planeja e abre PR; Quest lê e
+executa). `kill`/`tmux send-keys` ficam como ferramentas de observação e
+controle do PC, não como canal de comunicação.
