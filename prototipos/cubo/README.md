@@ -29,3 +29,21 @@ ssh quest3 'tail -f ~/cubo/log.txt'   # ver o que acontece dentro do navegador
 - Oclusão: pelas mãos (esferas depth-only nas 25 articulações) + Depth API
   (`depth-sensing` concedido: `gpu-optimized`, `unsigned-short`). Mão real
   na frente esconde o cubo — confirmado pelo Julio.
+
+## Botão de captura (2026-09-25)
+
+Botão 3D "📷 Capturar" ao lado do cubo (fora do anel, à direita de quem
+olha). Apertar = autorização do Julio. Envia pro servidor (`POST /captura`,
+salvo em `~/cubo/capturas/` no Quest — **fora do git**, repo é público):
+
+- `*-virtual.jpg` — cena re-renderizada do ponto de vista do olho esquerdo.
+- `*-camera.jpg` — quadro da câmera real, se liberada no botão 2D
+  "Permitir câmera" **antes** do START AR (o prompt de permissão não aparece
+  dentro do modo imersivo).
+
+Armadilha: o Quest expõe 3 câmeras ao navegador. `camera 0, facing front` é
+a **webcam virtual do avatar Meta** (selfie do avatar, não a sala). As reais
+do passthrough são `camera 1`/`camera 2, facing back` — a página escolhe
+uma "back" pelo rótulo.
+
+Buscar do PC: `scp 'quest3:~/cubo/capturas/*.jpg' <scratchpad>/`

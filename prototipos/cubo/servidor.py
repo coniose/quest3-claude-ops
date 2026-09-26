@@ -6,6 +6,18 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
+        if self.path.startswith('/captura'):
+            # corpo = JPEG binario; ?tipo=virtual|camera
+            tipo = 'camera' if 'tipo=camera' in self.path else 'virtual'
+            dados = self.rfile.read(int(self.headers.get('Content-Length', 0)))
+            os.makedirs('capturas', exist_ok=True)
+            nome = f"capturas/{datetime.datetime.now():%Y%m%d-%H%M%S}-{tipo}.jpg"
+            with open(nome, 'wb') as f:
+                f.write(dados)
+            print(f"captura salva: {nome} ({len(dados)} bytes)", flush=True)
+            self.send_response(204)
+            self.end_headers()
+            return
         if self.path != '/log':
             self.send_error(404)
             return

@@ -27,7 +27,8 @@
 </head>
 <body>
 <div id="info">Toque em <b>START AR</b> embaixo. O cubo aparece na sua frente.<br>
-Aponte o controle (ou a mão) e aperte o gatilho / faça pinça pra pegar, mover e girar.</div>
+Aponte o controle (ou a mão) e aperte o gatilho / faça pinça pra pegar, mover e girar.<br>Botão vermelho <b>📷 Capturar</b> ao lado do cubo manda uma foto pro PC.</div>
+<button id="btnCamera" style="position:absolute;top:110px;left:16px;font-size:22px;padding:14px 22px;border-radius:12px;border:0;background:#dc2626;color:#fff">📷 Permitir câmera (antes do START AR)</button>
 <pre id="status" style="position:absolute;bottom:80px;left:16px;right:16px;font-size:14px;color:#9f9;white-space:pre-wrap"></pre>
 <script type="module">
 import * as THREE from 'three';
@@ -52,7 +53,8 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 20);
 camera.position.set(0, 1.4, 0.3);
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2));
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8888aa, 1.5));
+scene.add(new THREE.AmbientLight(0xffffff, 1.2));
 const sol = new THREE.DirectionalLight(0xffffff, 2);
 sol.position.set(1, 3, 2);
 scene.add(sol);
@@ -84,6 +86,7 @@ for (let i = 0; i < 2; i++) {
   ctrl.add(raio);
 
   ctrl.addEventListener('selectstart', () => {
+    if (miraEm(ctrl, botao)) { apertouBotao(); return; }
     if (mira(ctrl)) {
       log('pegou o cubo');
       ctrl.attach(cubo);
@@ -124,11 +127,102 @@ function atualizaOclusaoMaos() {
   }
 }
 
+// ---- Botao de captura (3D, ao lado do cubo) ----
+// Apertar = autorizacao do Julio. Captura a cena virtual do ponto de vista do
+// olho esquerdo e, se o navegador liberar, um quadro da camera (passthrough).
+function textura(texto, cor) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 96;
+  const g = c.getContext('2d');
+  g.fillStyle = cor; g.beginPath(); g.roundRect(0, 0, 256, 96, 24); g.fill();
+  g.fillStyle = '#fff'; g.font = 'bold 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(texto, 128, 50);
+  return new THREE.CanvasTexture(c);
+}
+const TEX_BOTAO = textura('📷 Capturar', '#dc2626'), TEX_OK = textura('✔ Enviado', '#16a34a');
+const botao = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 0.06), new THREE.MeshBasicMaterial({ map: TEX_BOTAO, transparent: true }));
+scene.add(botao);
+
+let fluxoCamera = null, videoCamera = null;
+async function abreCamera() {
+  if (fluxoCamera !== null) return;
+  fluxoCamera = false;
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    log('dispositivos de video:', devs.filter(d => d.kind === 'videoinput').map(d => d.label || d.deviceId.slice(0, 6)));
+    // camera 0 "facing front" do Quest e a webcam virtual do avatar Meta;
+    // as reais (passthrough) sao as "facing back". Rotulos so vem apos permissao.
+    const traseira = devs.find(d => d.kind === 'videoinput' && /back/i.test(d.label));
+    const video = traseira
+      ? { deviceId: { exact: traseira.deviceId }, width: 1280, height: 960 }
+      : { facingMode: 'environment', width: 1280, height: 960 };
+    const s = await navigator.mediaDevices.getUserMedia({ video });
+    videoCamera = document.createElement('video');
+    videoCamera.srcObject = s; videoCamera.muted = true; videoCamera.playsInline = true;
+    await videoCamera.play();
+    fluxoCamera = s;
+    log('camera liberada:', s.getVideoTracks()[0].label, videoCamera.videoWidth + 'x' + videoCamera.videoHeight);
+  } catch (e) { log('camera indisponivel:', String(e)); }
+}
+
+document.getElementById('btnCamera').addEventListener('click', async () => {
+  fluxoCamera = null;
+  await abreCamera();
+  const b = document.getElementById('btnCamera');
+  b.textContent = fluxoCamera ? '✔ Câmera liberada — agora START AR' : '✖ Câmera não liberada (ver log)';
+  b.style.background = fluxoCamera ? '#16a34a' : '#555';
+});
+
+function envia(canvas, tipo) {
+  canvas.toBlob(b => fetch('/captura?tipo=' + tipo, { method: 'POST', body: b })
+    .then(() => log('captura enviada:', tipo, b.size + ' bytes')), 'image/jpeg', 0.85);
+}
+
+const rtCaptura = new THREE.WebGLRenderTarget(1024, 1024);
+let pedirCaptura = false;
+function capturaVirtual() {
+  const olho = renderer.xr.getCamera().cameras[0] || camera;
+  const xrAntes = renderer.xr.enabled;
+  renderer.xr.enabled = false;
+  const fundo = scene.background;
+  scene.background = new THREE.Color(0x222222);
+  botao.visible = false;
+  renderer.setRenderTarget(rtCaptura);
+  renderer.render(scene, olho);
+  const px = new Uint8Array(1024 * 1024 * 4);
+  renderer.readRenderTargetPixels(rtCaptura, 0, 0, 1024, 1024, px);
+  renderer.setRenderTarget(null);
+  scene.background = fundo; botao.visible = true;
+  renderer.xr.enabled = xrAntes;
+  const c = document.createElement('canvas'); c.width = c.height = 1024;
+  const g = c.getContext('2d'), img = g.createImageData(1024, 1024);
+  for (let y = 0; y < 1024; y++) img.data.set(px.subarray((1023 - y) * 4096, (1024 - y) * 4096), y * 4096); // inverte Y
+  g.putImageData(img, 0, 0);
+  envia(c, 'virtual');
+}
+function capturaCamera() {
+  if (!fluxoCamera || !videoCamera.videoWidth) return;
+  const c = document.createElement('canvas');
+  c.width = videoCamera.videoWidth; c.height = videoCamera.videoHeight;
+  c.getContext('2d').drawImage(videoCamera, 0, 0);
+  envia(c, 'camera');
+}
+function apertouBotao() {
+  log('botao de captura apertado');
+  pedirCaptura = true;
+  capturaCamera();
+  botao.material.map = TEX_OK;
+  setTimeout(() => { botao.material.map = TEX_BOTAO; }, 1500);
+}
+
 function mira(ctrl) {
   matriz.identity().extractRotation(ctrl.matrixWorld);
   raycaster.ray.origin.setFromMatrixPosition(ctrl.matrixWorld);
   raycaster.ray.direction.set(0, 0, -1).applyMatrix4(matriz);
   return raycaster.intersectObject(cubo, false).length > 0;
+}
+function miraEm(ctrl, obj) {
+  mira(ctrl);
+  return raycaster.intersectObject(obj, false).length > 0;
 }
 
 let precisaPosicionar = false;
@@ -137,6 +231,7 @@ renderer.xr.addEventListener('sessionstart', () => {
   log('recursos concedidos:', [...(sess.enabledFeatures || [])].join(','), 'depth:', sess.depthUsage || '-', sess.depthDataFormat || '-');
   log('sessao XR iniciou', sess.environmentBlendMode, 'refspace:', renderer.xr.getReferenceSpace() ? 'ok' : 'nulo');
   precisaPosicionar = true;
+  abreCamera();
 });
 renderer.xr.addEventListener('sessionend', () => log('sessao XR terminou'));
 const _v = new THREE.Vector3(), _q = new THREE.Quaternion();
@@ -158,6 +253,14 @@ renderer.setAnimationLoop(() => {
   }
   atualizaOclusaoMaos();
   anel.position.copy(cubo.getWorldPosition(_p));
+  if (renderer.xr.isPresenting) {
+    renderer.xr.getCamera().getWorldPosition(_v);
+    anel.lookAt(_v);
+    const paraCubo = _p.clone().sub(_v).setY(0).normalize();
+    const direita = new THREE.Vector3().crossVectors(paraCubo, THREE.Object3D.DEFAULT_UP).normalize();
+    botao.position.copy(_p).addScaledVector(direita, 0.5).add(new THREE.Vector3(0, -0.15, 0));
+    botao.lookAt(_v);
+  }
   if (renderer.xr.isPresenting && performance.now() - ultimoLog > 2000) {
     ultimoLog = performance.now();
     const cam = renderer.xr.getCamera(); cam.getWorldPosition(_v);
@@ -169,6 +272,7 @@ renderer.setAnimationLoop(() => {
     cubo.material.color.setHex(mirando ? COR_MIRA : COR_NORMAL);
   }
   renderer.render(scene, camera);
+  if (pedirCaptura) { pedirCaptura = false; capturaVirtual(); }
 });
 
 addEventListener('resize', () => {
