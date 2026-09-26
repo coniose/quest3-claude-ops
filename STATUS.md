@@ -70,3 +70,24 @@ Issues abertos:
 
 - #3 `[para-pc]` — pubkey em `administrators_authorized_keys` (PC sem admin, escalou)
 - #4 `[para-julio]` — rodar PowerShell elevado (bloqueio real do passo 2)
+
+## Task 002 — `claude` no PATH do sshd + wrapper `claudepc`
+
+- [x] `claude` no PATH de sessão SSH não-interativa no PC — **resolvido sem
+      admin**: `C:\Users\<usuario>\.local\bin` está no PATH de *usuário*, e o
+      sshd do Windows carrega esse PATH. Testado 2026-09-25 a partir do Quest:
+      `ssh ... <usuario>@<ip-do-pc> "where claude & claude --version"` →
+      `C:\Users\<usuario>\.local\bin\claude.exe`, `2.1.283 (Claude Code)`.
+      Não precisou mexer no PATH de sistema (Machine).
+- [x] Wrapper `claudepc` no Termux — script versionado em
+      `shortcuts/claudepc.sh`, instalado em `$PREFIX/bin/claudepc`. Usa o
+      alias `pc` do `~/.ssh/config` do Termux (IP/usuário ficam só no
+      device, fora do repo público). Sem argumentos: `ssh -t pc` + `claude
+      --continue` em `C:\quest3-claude-ops`; com argumentos, repassa pro
+      `claude`.
+  - Teste headless 2026-09-25: `claudepc -p "reply with exactly: pong from
+    pc via claudepc"` → `pong from pc via claudepc`, exit 0.
+  - Alocação de TTY (`ssh -tt pc`) confirmada — abre conhost/ConPTY no PC.
+- [ ] Sessão interativa real (`claudepc` digitado no Termux, com teclado no
+      headset) — precisa ser testada pelo Julio no Quest; não dá pra
+      validar interatividade de ponta a ponta disparando daqui.
