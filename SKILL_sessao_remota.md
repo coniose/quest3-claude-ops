@@ -78,3 +78,22 @@ quem digita `claudepc` no Termux tem execução sem confirmação no PC
 inteiro (arquivos, shell, SSH de volta pro Quest). A proteção passa a ser só
 o acesso físico ao headset + a chave `id_ed25519_quest`. Testado: `claudepc
 -p` criou arquivo no PC sem prompt de permissão.
+
+## Controle do Termux a partir do PC (aprendido 2026-09-25)
+
+O SSH no Quest entra como o mesmo usuário Android do app Termux, então o PC
+tem controle total sobre o que roda **dentro do Termux** (não sobre outros
+apps do Quest — sandbox do Android):
+
+- **Ver/matar processos**, inclusive a aba visível na tela do Julio:
+  `ssh quest3 'ps -eo pid,etime,tty,args'` e `kill <pid>`.
+- **Abrir aba nova visível na tela** via intent `RUN_COMMAND` (exige
+  `allow-external-apps = true` em `~/.termux/termux.properties`, já ativo):
+  ```bash
+  ssh quest3 claudepc-reabrir   # mata claudepc antigo + abre novo na frente
+  ```
+  Testado: a sessão Claude (bypass permissions) apareceu sozinha na tela.
+- **Digitar numa aba já aberta: não dá** — Android bloqueia injeção de
+  teclas em TTY de outra sessão. Por isso "sair" é matar o processo, não
+  mandar `/exit`. Se precisar disso, rodar sessões dentro de `tmux` e usar
+  `tmux send-keys` (ainda não configurado).
