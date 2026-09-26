@@ -12,6 +12,8 @@
 #
 # Uso:
 #   claudepc                 -> sessao interativa, retoma a ultima (--continue)
+#   (sempre com --dangerously-skip-permissions — decisao do Julio 2026-09-25,
+#   ver SKILL_sessao_remota.md)
 #   claudepc -p "prompt"     -> repassa os argumentos pro claude (headless)
 #
 # Shell padrao do sshd no Windows e cmd.exe, por isso "cd /d" e "&&".
@@ -22,11 +24,11 @@ PC_HOST="${CLAUDEPC_HOST:-pc}"
 PC_DIR="${CLAUDEPC_DIR:-C:\\quest3-claude-ops}"
 
 if [ $# -eq 0 ]; then
-  exec ssh -t "$PC_HOST" "cd /d $PC_DIR && claude --continue"
+  exec ssh -t "$PC_HOST" "cd /d $PC_DIR && claude --dangerously-skip-permissions --continue"
 fi
 
 args=""
 for a in "$@"; do
   args="$args \"$a\""
 done
-exec ssh -t "$PC_HOST" "cd /d $PC_DIR && claude$args"
+exec ssh -t "$PC_HOST" "cd /d $PC_DIR && claude --dangerously-skip-permissions$args"

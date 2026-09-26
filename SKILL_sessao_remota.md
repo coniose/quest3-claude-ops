@@ -70,3 +70,11 @@ significa que uma sessão disparada remotamente executa qualquer ferramenta
 sem pedir confirmação nenhuma, incluindo nova ação SSH de volta pro PC. Se
 essa decisão mudar, atualizar aqui também — não é padrão "óbvio" o
 suficiente pra ficar implícito só no comando.
+
+**Direção Quest → PC também (2026-09-25):** o wrapper `claudepc`
+(`shortcuts/claudepc.sh`) sempre inicia o Claude do PC com
+`--dangerously-skip-permissions`, a pedido explícito do Julio. Consequência:
+quem digita `claudepc` no Termux tem execução sem confirmação no PC
+inteiro (arquivos, shell, SSH de volta pro Quest). A proteção passa a ser só
+o acesso físico ao headset + a chave `id_ed25519_quest`. Testado: `claudepc
+-p` criou arquivo no PC sem prompt de permissão.

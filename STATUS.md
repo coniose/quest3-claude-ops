@@ -84,7 +84,8 @@ Issues abertos:
       alias `pc` do `~/.ssh/config` do Termux (IP/usuário ficam só no
       device, fora do repo público). Sem argumentos: `ssh -t pc` + `claude
       --continue` em `C:\quest3-claude-ops`; com argumentos, repassa pro
-      `claude`.
+      `claude`. Sempre com `--dangerously-skip-permissions` (pedido do
+      Julio 2026-09-25 — testado: escrita de arquivo no PC sem prompt).
   - Teste headless 2026-09-25: `claudepc -p "reply with exactly: pong from
     pc via claudepc"` → `pong from pc via claudepc`, exit 0.
   - Alocação de TTY (`ssh -tt pc`) confirmada — abre conhost/ConPTY no PC.
